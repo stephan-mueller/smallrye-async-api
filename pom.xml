@@ -65,6 +65,7 @@
         <version.org.jboss.shrinkwrap>1.2.6</version.org.jboss.shrinkwrap>
         <version.org.skyscreamer>1.5.0</version.org.skyscreamer>
         <version.org.jboss.resteasy.core-spi>4.5.8.Final</version.org.jboss.resteasy.core-spi>
+        <version.org.junit.jupiter.junit-jupiter>5.6.2</version.org.junit.jupiter.junit-jupiter>
 
         <version.arquillian>1.6.0.Final</version.arquillian>
         <version.io.rest-assured>4.3.3</version.io.rest-assured>
@@ -83,6 +84,9 @@
         <version.maven.javadoc.plugin>3.2.0</version.maven.javadoc.plugin>
         <version.maven.source.plugin>3.2.1</version.maven.source.plugin>
         <version.maven.release.plugin>2.5.3</version.maven.release.plugin>
+
+        <version.compiler.plugin>3.8.1</version.compiler.plugin>
+        <version.jar.plugin>3.2.0</version.jar.plugin>
 
         <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/tck/target/site/jacoco-aggregate/jacoco.xml,${project.basedir}/../tck/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
@@ -108,7 +112,7 @@
 
     <modules>
         <module>spec</module>
-        <module>implementation</module>
+        <module>core</module>
         <module>tck</module>
         <module>tools</module>
     </modules>
@@ -129,6 +133,11 @@
             <dependency>
                 <groupId>io.smallrye</groupId>
                 <artifactId>smallrye-async-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-async-api-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -251,6 +260,12 @@
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
                 <version>${version.commons-logging}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${version.org.junit.jupiter.junit-jupiter}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
