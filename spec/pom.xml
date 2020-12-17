@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2019 Red Hat
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions
+  ~ and limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.smallrye</groupId>
+        <artifactId>smallrye-async-api-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>smallrye-async-api-spec</artifactId>
+    <name>SmallRye: MicroProfile AsyncAPI Spec</name>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>api</module>
+        <module>doc</module>
+        <module>tck</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <checkstyle.methodNameFormat>^_?[a-z][a-zA-Z0-9]*$|DELETE|GET|HEAD|OPTIONS|PATCH|POST|PUT|TRACE</checkstyle.methodNameFormat>
+    </properties>
+
+    <developers>
+        <developer>
+            <name>Stephan Mueller</name>
+            <email>stephan.mueller@openknowledge.de</email>
+            <organization>open knowledge GmbH</organization>
+        </developer>
+        <developer>
+            <name>Max Weis</name>
+            <email>max.weis@openknowledge.de</email>
+            <organization>open knowledge GmbH</organization>
+        </developer>
+        <developer>
+            <name>Peter Rossbach</name>
+            <email>peter.rossbach@bee42.com</email>
+            <organization>bee42 solutions gmbh</organization>
+        </developer>
+    </developers>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>verify-style</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <consoleOutput>true</consoleOutput>
+                    <failOnViolation>true</failOnViolation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <failsOnError>true</failsOnError>
+                    <linkXRef>true</linkXRef>
+                    <logViolationsToConsole>true</logViolationsToConsole>
+                    <checkstyleRules>
+                        <module name="Checker">
+                            <module name="SuppressionCommentFilter"/>
+                            <module name="FileLength">
+                                <property name="max" value="3500"/>
+                                <property name="fileExtensions" value="java"/>
+                            </module>
+                            <module name="FileTabCharacter"/>
+                            <module name="TreeWalker">
+                                <module name="FileContentsHolder"/>
+                                <module name="ConstantName">
+                                    <property name="format" value="^(([A-Z][A-Z0-9]*(_[A-Z0-9]+)*))$"/>
+                                </module>
+                                <module name="LocalVariableName"/>
+                                <module name="MethodName">
+                                    <property name="format" value="${checkstyle.methodNameFormat}"/>
+                                </module>
+                                <module name="PackageName"/>
+                                <module name="LocalFinalVariableName"/>
+                                <module name="ParameterName"/>
+                                <module name="StaticVariableName"/>
+
+                                <module name="TypeName">
+                                    <property name="format" value="^_?[A-Z][a-zA-Z0-9]*$|packageinfo"/>
+                                </module>
+                                <module name="AvoidStarImport">
+                                    <property name="excludes"
+                                              value="java.io,java.net,java.util,javax.enterprise.inject.spi,javax.enterprise.context"/>
+                                </module>
+                                <module name="IllegalImport"/>
+                                <module name="RedundantImport"/>
+                                <module name="UnusedImports"/>
+                                <module name="LineLength">
+                                    <property name="max" value="150"/>
+                                    <property name="ignorePattern" value="@version|@see"/>
+                                </module>
+                                <module name="MethodLength">
+                                    <property name="max" value="250"/>
+                                </module>
+                                <module name="ParameterNumber">
+                                    <property name="max" value="11"/>
+                                </module>
+                                <module name="EmptyBlock">
+                                    <property name="option" value="text"/>
+                                </module>
+                                <module name="NeedBraces"/>
+                                <module name="LeftCurly">
+                                    <property name="option" value="EOL"/>
+                                </module>
+                                <module name="RightCurly">
+                                    <property name="option" value="ALONE"/>
+                                </module>
+                                <module name="EmptyStatement"/>
+                                <module name="EqualsHashCode"/>
+                                <module name="DefaultComesLast"/>
+                                <module name="MissingSwitchDefault"/>
+                                <module name="FallThrough"/>
+                                <module name="MultipleVariableDeclarations"/>
+                                <module name="com.puppycrawl.tools.checkstyle.checks.design.DesignForExtensionCheck">
+                                    <property name="severity" value="ignore"/>
+                                </module>
+                                <module name="HideUtilityClassConstructor"/>
+                                <module name="com.puppycrawl.tools.checkstyle.checks.design.VisibilityModifierCheck">
+                                    <property name="packageAllowed" value="false"/>
+                                    <property name="protectedAllowed" value="true"/>
+                                    <property name="publicMemberPattern" value="^serialVersionUID"/>
+                                    <property name="severity" value="warning"/>
+                                </module>
+                                <module name="UpperEll"/>
+                            </module>
+                        </module>
+                    </checkstyleRules>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <version>${version.apache.rat.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>rat-check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <excludes>
+                        <exclude>.travis.yml.*</exclude>
+                        <exclude>**/bnd.bnd</exclude>
+                        <exclude>*.log</exclude>
+                        <exclude>.checkstyle</exclude>
+                        <exclude>.factorypath</exclude>
+                        <exclude>.editorconfig</exclude>
+                        <exclude>**/target/</exclude>
+                        <exclude>**/bin/</exclude>
+                        <exclude>**/*.iml</exclude>
+                        <exclude>**/*.idea</exclude>
+                        <exclude>**/*.ipr</exclude>
+                        <exclude>**/.externalToolBuilders/*</exclude>
+                        <exclude>nb**.xml</exclude>
+                        <exclude>.github/**/*.*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -20,8 +20,11 @@ mvn verify
 
 === Project structure
 
-* link:spec/api[] - Specification classes and interfaces.
-* link:spec/tck[] - Specification TCK tests.
+* link:spec[] - Specification
+** link:spec/api[] - Specification classes and interfaces.
+** link:spec/doc[] - Specification documentation.
+** link:spec/tck[] - Specification TCK tests.
+
 * link:implementation[] - Implementation of the specification.
 * link:tck[] - Test suite to run the spec TCK against the implementation.
 

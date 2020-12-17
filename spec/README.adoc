@@ -1,0 +1,31 @@
+//
+// Copyright (C) open knowledge GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions
+// and limitations under the License.
+//
+
+= SmallRye AsyncAPI Spec
+
+This specification aims at providing a unified Java API for the link:++https://www.asyncapi.com/docs/specifications/2.0.0++[AsyncAPI v2 specification],
+that all application developers can use to expose their API documentation.
+
+* The link:++api/src/main/java/io/smallrye/asyncapi/spec/++[spec APIs] are composed of annotations, models, and programming interfaces.
+* The link:++doc/src/docs/asciidoc/asyncapi-spec.adoc++[spec documentation] outlines the rules and boundaries of the spec.
+* Generate AsyncAPI Code link:++https://modeling-languages.com/asyncapi-modeling-editor-code-generator/++[asyncapi modeling editor code generator]
+
+== Usage
+
+....
+mvn generate-resources
+open doc/target/generated-docs/<version>/asyncapi-spec.[html|pdf]
+....
