@@ -115,6 +115,7 @@
         <module>core</module>
         <module>tck</module>
         <module>tools</module>
+        <module>examples</module>
     </modules>
 
     <dependencyManagement>
