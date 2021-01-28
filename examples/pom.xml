@@ -29,4 +29,8 @@
     <artifactId>smallrye-async-api-examples</artifactId>
     <packaging>pom</packaging>
     <name>SmallRye: MicroProfile AsyncAPI Examples</name>
+
+    <modules>
+        <module>jms</module>
+    </modules>
 </project>
