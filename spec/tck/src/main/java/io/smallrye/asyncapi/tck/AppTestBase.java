@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,26 +22,35 @@ import java.net.URL;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jboss.arquillian.testng.Arquillian;
-import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 
 import io.restassured.RestAssured;
+import io.restassured.filter.Filter;
 import io.restassured.http.ContentType;
 import io.restassured.parsing.Parser;
+import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
+import io.smallrye.asyncapi.tck.utils.YamlToJsonFilter;
 
 public abstract class AppTestBase extends Arquillian {
 
     private static final String DEFAULT_PROTOCOL = "http";
+
     private static final String DEFAULT_HOST = "localhost";
+
     private static final int DEFAULT_PORT = 9080;
 
     private static String serverUrl;
+
     private static String username;
+
     private static String password;
 
-    @BeforeSuite
-    public static void setUp() throws MalformedURLException {
+    protected static final Filter YAML_FILTER = new YamlToJsonFilter();
+
+    @BeforeClass
+    public static void configureRestAssured() throws MalformedURLException {
         // set base URI and port number to use for all requests
         serverUrl = System.getProperty("test.url");
         String protocol = DEFAULT_PROTOCOL;
@@ -75,16 +84,31 @@ public abstract class AppTestBase extends Arquillian {
     public ValidatableResponse callEndpoint(String type) {
         ValidatableResponse vr;
         if ("JSON".equals(type)) {
-            vr = given().accept(ContentType.JSON).when().get("/asyncapi").then().statusCode(200);
+            vr = given().accept(ContentType.JSON)
+                    .when()
+                    .get("/asyncapi")
+                    .then()
+                    .statusCode(200);
         } else {
-            // It seems there is no standard for YAML
-            vr = given().accept(ContentType.ANY).when().get("/asyncapi").then().statusCode(200);
+            vr = given().filter(YAML_FILTER)
+                    .accept(ContentType.ANY)
+                    .when()
+                    .get("/asyncapi")
+                    .then()
+                    .statusCode(200);
         }
         return vr;
     }
 
+    public Response getResponse() {
+        return given().filter(YAML_FILTER)
+                .accept(ContentType.ANY)
+                .when()
+                .get("/asyncapi");
+    }
+
     @DataProvider(name = "formatProvider")
-    public Object[][] provide() throws Exception {
+    public Object[][] provide() {
         return new Object[][] { { "JSON" }, { "YAML" } };
     }
 }
