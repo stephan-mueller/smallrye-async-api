@@ -55,6 +55,7 @@
         <version.commons-beanutils>1.9.4</version.commons-beanutils>
         <version.commons-logging>1.2</version.commons-logging>
         <version.httpclient>4.5.13</version.httpclient>
+        <version.quarkus>1.11.0.Final</version.quarkus>
 
         <version.reactivemessaging.api>2.3.0</version.reactivemessaging.api>
         <version.reactivemessaging.mqtt>2.3.0</version.reactivemessaging.mqtt>
@@ -213,6 +214,13 @@
                 <artifactId>httpclient</artifactId>
                 <version>${version.httpclient}</version>
             </dependency>
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${version.quarkus}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
             <!-- Test-only dependencies -->
             <dependency>
@@ -337,6 +345,11 @@
                     <groupId>org.apache.rat</groupId>
                     <artifactId>apache-rat-plugin</artifactId>
                     <version>${version.apache.rat.plugin}</version>
+                </plugin>
+                <plugin>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-maven-plugin</artifactId>
+                    <version>${version.quarkus}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.eclipse.cbi.maven.plugins</groupId>
