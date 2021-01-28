@@ -24,10 +24,12 @@ import java.lang.reflect.ParameterizedType;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -41,34 +43,34 @@ import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.ParentRunner;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
 
-import io.apicurio.datamodels.Library;
-import io.apicurio.datamodels.core.models.Document;
-import io.smallrye.asyncapi.api.AsyncApiConfig;
-import io.smallrye.asyncapi.api.AsyncApiDocument;
-import io.smallrye.asyncapi.api.util.ArchiveUtil;
-import io.smallrye.asyncapi.runtime.AsyncApiProcessor;
-import io.smallrye.asyncapi.runtime.AsyncApiStaticFile;
+import io.smallrye.asyncapi.core.api.AsyncApiConfig;
+import io.smallrye.asyncapi.core.api.AsyncApiDocument;
+import io.smallrye.asyncapi.core.runtime.AsyncApiFormat;
+import io.smallrye.asyncapi.core.runtime.AsyncApiProcessor;
+import io.smallrye.asyncapi.core.runtime.AsyncApiStaticFile;
+import io.smallrye.asyncapi.core.runtime.io.AsyncApiSerializer;
+import io.smallrye.asyncapi.spec.models.AsyncAPI;
 
 /**
- * A Junit 4 test runner used to quickly run the AsyncAPI tck tests directly against the
- * {@link AsyncApiDocument} without spinning up an MP compliant server. This is not
- * a replacement for running the full AsyncAPI TCK using Arquillian. However, it runs
- * much faster and does *most* of what we need for coverage.
- *
- * @author eric.wittmann@gmail.com
+ * A Junit 4 test runner used to quickly run the OpenAPI tck tests directly against the {@link AsyncApiDocument} without
+ * spinning up an MP compliant
+ * server. This is not a replacement for running the full AsyncAPI TCK using Arquillian. However, it runs much faster and does
+ * *most* of what we need
+ * for coverage.
  */
 @SuppressWarnings("rawtypes")
 public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
 
     private Class<?> testClass;
+
     private Class<? extends Arquillian> tckTestClass;
 
-    public static Map<Class, Document> ASYNC_API_DOCS = new HashMap<>();
+    public static Map<Class, AsyncAPI> ASYNC_API_DOCS = new HashMap<>();
 
     /**
-     * Constructor.
-     * 
      * @param testClass
      * @throws InitializationError
      */
@@ -86,18 +88,13 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
             IndexView index = ArchiveUtil.archiveToIndex(config, archive);
             AsyncApiStaticFile staticFile = ArchiveUtil.archiveToStaticFile(archive);
 
-            // Reset and then initialize the AsyncApiDocument for this test.
-            AsyncApiDocument.INSTANCE.reset();
-            AsyncApiDocument.INSTANCE.config(config);
-            AsyncApiDocument.INSTANCE.modelFromStaticFile(AsyncApiProcessor.modelFromStaticFile(staticFile));
-            AsyncApiDocument.INSTANCE.modelFromAnnotations(AsyncApiProcessor.modelFromAnnotations(config, index));
-            AsyncApiDocument.INSTANCE.modelFromReader(AsyncApiProcessor.modelFromReader(config, getContextClassLoader()));
-            AsyncApiDocument.INSTANCE.filter(AsyncApiProcessor.getFilter(config, getContextClassLoader()));
-            AsyncApiDocument.INSTANCE.initialize();
+            ClassLoader loader = getContextClassLoader();
 
-            Assert.assertNotNull("Generated OAI document must not be null.", AsyncApiDocument.INSTANCE.get());
+            AsyncAPI asyncAPI = AsyncApiProcessor.bootstrap(config, index, loader, staticFile);
 
-            ASYNC_API_DOCS.put(testClass, AsyncApiDocument.INSTANCE.get());
+            Assert.assertNotNull("Generated AAI document must not be null.", asyncAPI);
+
+            ASYNC_API_DOCS.put(testClass, asyncAPI);
 
             // Output the /asyncapi content to a file for debugging purposes
             File parent = new File("target", "TckTestRunner");
@@ -105,7 +102,7 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
                 parent.mkdir();
             }
             File file = new File(parent, testClass.getName() + ".json");
-            String content = Library.writeDocumentToJSONString(AsyncApiDocument.INSTANCE.get());
+            String content = AsyncApiSerializer.serialize(asyncAPI, AsyncApiFormat.JSON);
             try (FileWriter writer = new FileWriter(file)) {
                 IOUtils.write(content, writer);
             }
@@ -126,7 +123,7 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
                     return archive;
                 }
             }
-            throw new Exception("No @Deployment archive found for test.");
+            throw TckMessages.msg.missingDeploymentArchive();
         } catch (Exception e) {
             throw new InitializationError(e);
         }
@@ -134,7 +131,7 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
 
     /**
      * Figures out what TCK test is being run.
-     * 
+     *
      * @throws InitializationError
      */
     @SuppressWarnings("unchecked")
@@ -152,35 +149,53 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
         List<ProxiedTckTest> children = new ArrayList<>();
         Method[] methods = tckTestClass.getMethods();
         for (Method method : methods) {
-            if (method.isAnnotationPresent(org.testng.annotations.Test.class)) {
+            if (method.isAnnotationPresent(Test.class)) {
                 try {
-                    ProxiedTckTest test = new ProxiedTckTest();
                     Object theTestObj = this.testClass.newInstance();
-                    test.setTest(theTestObj);
-                    test.setTestMethod(method);
-                    test.setDelegate(createDelegate(theTestObj));
-                    children.add(test);
+                    Arquillian delegate = createDelegate(theTestObj);
+                    Test testAnnotation = method.getAnnotation(Test.class);
+                    String providerMethodName = testAnnotation.dataProvider();
+                    Method providerMethod = null;
+
+                    for (Method m : tckTestClass.getMethods()) {
+                        if (m.isAnnotationPresent(DataProvider.class)) {
+                            DataProvider provider = m.getAnnotation(DataProvider.class);
+                            if (provider.name()
+                                .equals(providerMethodName)) {
+                                providerMethod = m;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (method.getParameterCount() > 0 && providerMethod != null) {
+                        Object[][] args = (Object[][]) providerMethod.invoke(delegate);
+
+                        for (Object[] arg : args) {
+                            children.add(ProxiedTckTest.create(delegate, theTestObj, method, arg));
+                        }
+                    } else {
+                        children.add(ProxiedTckTest.create(delegate, theTestObj, method, new Object[0]));
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
         }
-        children.sort(new Comparator<ProxiedTckTest>() {
-            @Override
-            public int compare(ProxiedTckTest o1, ProxiedTckTest o2) {
-                return o1.getTestMethod().getName().compareTo(o2.getTestMethod().getName());
-            }
-        });
+        children.sort(Comparator.comparing(o -> o.getTestMethod()
+            .getName()));
         return children;
     }
 
     /**
-     * Creates the delegate test instance. This is done by instantiating the test itself
-     * and calling its "getDelegate()" method. If no such method exists then an error
-     * is thrown.
+     * Creates the delegate test instance. This is done by instantiating the test itself and calling its "getDelegate()" method.
+     * If no such method
+     * exists then an error is thrown.
      */
     private Arquillian createDelegate(Object testObj) throws Exception {
-        Object delegate = testObj.getClass().getMethod("getDelegate").invoke(testObj);
+        Object delegate = testObj.getClass()
+            .getMethod("getDelegate")
+            .invoke(testObj);
         return (Arquillian) delegate;
     }
 
@@ -189,7 +204,17 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
      */
     @Override
     protected Description describeChild(ProxiedTckTest child) {
-        return Description.createTestDescription(tckTestClass, child.getTestMethod().getName());
+        StringBuilder name = new StringBuilder(child.getTestMethod()
+            .getName());
+
+        if (child.getArguments().length > 0) {
+            name.append(' ');
+            name.append(Arrays.stream(child.getArguments())
+                .map(Object::toString)
+                .collect(Collectors.joining(",")));
+        }
+
+        return Description.createTestDescription(tckTestClass, name.toString());
     }
 
     /**
@@ -197,7 +222,8 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
      */
     @Override
     protected void runChild(final ProxiedTckTest child, final RunNotifier notifier) {
-        AsyncApiDocument.INSTANCE.set(TckTestRunner.ASYNC_API_DOCS.get(child.getTest().getClass()));
+        AsyncApiDocument.INSTANCE.set(TckTestRunner.ASYNC_API_DOCS.get(child.getTest()
+            .getClass()));
 
         Description description = describeChild(child);
         if (isIgnored(child)) {
@@ -207,13 +233,12 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
                 @Override
                 public void evaluate() throws Throwable {
                     try {
-                        Object[] args = (Object[]) child.getTest().getClass().getMethod("getTestArguments")
-                                .invoke(child.getTest());
-                        child.getTestMethod().invoke(child.getDelegate(), args);
+                        Method testMethod = child.getTestMethod();
+                        testMethod.invoke(child.getDelegate(), child.getArguments());
                     } catch (InvocationTargetException e) {
                         Throwable cause = e.getCause();
-                        org.testng.annotations.Test testAnno = child.getTestMethod()
-                                .getAnnotation(org.testng.annotations.Test.class);
+                        Test testAnno = child.getTestMethod()
+                            .getAnnotation(Test.class);
                         Class[] expectedExceptions = testAnno.expectedExceptions();
                         if (expectedExceptions != null && expectedExceptions.length > 0) {
                             Class expectedException = expectedExceptions[0];
@@ -234,15 +259,30 @@ public class TckTestRunner extends ParentRunner<ProxiedTckTest> {
      */
     @Override
     protected boolean isIgnored(ProxiedTckTest child) {
-        return child.getTestMethod().isAnnotationPresent(Ignore.class);
+        Method testMethod = child.getTestMethod();
+
+        if (testMethod.isAnnotationPresent(Ignore.class)) {
+            return true;
+        }
+
+        Method testMethodOverride;
+
+        try {
+            testMethodOverride = testClass.getMethod(testMethod.getName(), testMethod.getParameterTypes());
+            return testMethodOverride.isAnnotationPresent(Ignore.class);
+        } catch (NoSuchMethodException | SecurityException e) {
+            // Ignore, no override has been specified in the BaseTckTest subclass
+        }
+
+        return false;
     }
 
     private static ClassLoader getContextClassLoader() {
         if (System.getSecurityManager() == null) {
-            return Thread.currentThread().getContextClassLoader();
+            return Thread.currentThread()
+                .getContextClassLoader();
         }
-        return AccessController
-                .doPrivileged((PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
+        return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> Thread.currentThread()
+            .getContextClassLoader());
     }
-
 }

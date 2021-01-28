@@ -1,11 +1,11 @@
-/**
- * Copyright 2019 Red Hat, Inc, and individual contributors.
+/*
+ * Copyright 2019 Red Hat
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,12 +16,14 @@
 
 package test.io.smallrye.asyncapi.tck;
 
-import static io.restassured.RestAssured.given;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.ParameterizedType;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
+import javax.ws.rs.core.MediaType;
 
 import org.jboss.arquillian.testng.Arquillian;
 import org.junit.AfterClass;
@@ -32,24 +34,25 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-import io.apicurio.datamodels.Library;
 import io.restassured.RestAssured;
-import io.restassured.response.ValidatableResponse;
-import io.smallrye.asyncapi.api.AsyncApiDocument;
+import io.smallrye.asyncapi.core.api.AsyncApiDocument;
+import io.smallrye.asyncapi.core.runtime.AsyncApiFormat;
+import io.smallrye.asyncapi.core.runtime.io.AsyncApiSerializer;
+import io.smallrye.asyncapi.tck.utils.YamlToJsonFilter;
 
 /**
  * Base class for all Tck tests.
- * 
- * @author eric.wittmann@gmail.com
  */
 @SuppressWarnings("restriction")
 @RunWith(TckTestRunner.class)
 public abstract class BaseTckTest<T extends Arquillian> {
 
     protected static final String APPLICATION_JSON = "application/json";
+
     protected static final String TEXT_PLAIN = "text/plain";
 
     private static HttpServer server;
+
     private static int HTTP_PORT;
 
     @BeforeClass
@@ -69,30 +72,58 @@ public abstract class BaseTckTest<T extends Arquillian> {
         server.createContext("/asyncapi", new MyHandler());
         server.setExecutor(null);
         server.start();
+
+        // Register a filter that performs YAML to JSON conversion
+        // Called here because the TCK's AppTestBase#setUp() is not called. (Remove for 2.0)
+        RestAssured.filters(new YamlToJsonFilter());
     }
 
     @AfterClass
     public static final void tearDown() throws Exception {
         server.stop(0);
+        Thread.sleep(100);
+        System.out.println("TCK test server stopped.");
     }
 
     static class MyHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-            String response = null;
+            String acceptedTypes = t.getRequestHeaders().getFirst("Accept");
+            if (acceptedTypes == null) {
+                acceptedTypes = MediaType.WILDCARD;
+            }
+            String queryString = t.getRequestURI()
+                .getQuery();
+            AsyncApiFormat format;
+            String mediaType;
+
+            if ((queryString != null && Arrays.asList(queryString.split("&"))
+                .contains("format=JSON")) || acceptedTypes.contains(MediaType.APPLICATION_JSON)) {
+                format = AsyncApiFormat.JSON;
+                mediaType = MediaType.APPLICATION_JSON;
+            } else {
+                format = AsyncApiFormat.YAML;
+                mediaType = "application/x-yaml";
+            }
+
+            String response;
             try {
-                response = Library.writeDocumentToJSONString(AsyncApiDocument.INSTANCE.get());
+                response = AsyncApiSerializer.serialize(AsyncApiDocument.INSTANCE.get(), format);
             } catch (Throwable e) {
                 e.printStackTrace();
-                t.getResponseHeaders().add("Content-Type", APPLICATION_JSON);
+                t.getResponseHeaders().add("Content-Type", mediaType);
                 OutputStream os = t.getResponseBody();
-                os.write("{}".getBytes("UTF-8"));
+                if (format == AsyncApiFormat.JSON) {
+                    os.write("{}".getBytes(StandardCharsets.UTF_8));
+                } else {
+                    os.write("".getBytes(StandardCharsets.UTF_8));
+                }
                 os.flush();
                 os.close();
                 return;
             }
 
-            t.getResponseHeaders().add("Content-Type", APPLICATION_JSON);
+            t.getResponseHeaders().add("Content-Type", mediaType);
             t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());
@@ -101,20 +132,9 @@ public abstract class BaseTckTest<T extends Arquillian> {
     }
 
     /**
-     * Calls the endpoint.
-     * 
-     * @param format
-     */
-    protected ValidatableResponse doCallEndpoint(String format) {
-        ValidatableResponse vr;
-        vr = given().accept(APPLICATION_JSON).when().get("/asyncapi").then().statusCode(200);
-        return vr;
-    }
-
-    /**
-     * Returns an instance of the TCK test being run. The subclass must implement
-     * this so that the correct test delegate is created *and* its callEndpoint()
-     * method can be properly overridden.
+     * Returns an instance of the TCK test being run. The subclass must implement this so that the correct test delegate is
+     * created *and* its
+     * callEndpoint() method can be properly overridden.
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public T getDelegate() {
@@ -126,14 +146,4 @@ public abstract class BaseTckTest<T extends Arquillian> {
             throw new RuntimeException(e);
         }
     }
-
-    /**
-     * Arguments to pass to each of the test methods in the TCK test. This is
-     * typically null (no arguments) but at least one test ( {@link FilterTest} )
-     * has arguments to its methods.
-     */
-    public Object[] getTestArguments() {
-        return new String[] { "JSON" };
-    }
-
 }
