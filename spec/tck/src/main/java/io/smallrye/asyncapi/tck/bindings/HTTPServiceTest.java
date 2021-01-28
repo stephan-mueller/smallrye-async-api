@@ -51,8 +51,8 @@ public class HTTPServiceTest extends AppTestBase {
         vr.body(httpBinding + "type", equalTo("request"));
         vr.body(httpBinding + "method", equalTo("GET"));
         vr.body(httpBinding + "query.type", equalTo("object"));
-        vr.body(httpBinding + "query.properties.my-app-header.description", equalTo("The Id of the company"));
-        vr.body(httpBinding + "query.properties.my-app-header.minimum", equalTo(1));
+        vr.body(httpBinding + "query.properties.companyId.description", equalTo("The Id of the company"));
+        vr.body(httpBinding + "query.properties.companyId.minimum", equalTo(1));
         vr.body(httpBinding + "bindingVersion", equalTo("0.1.0"));
     }
 
