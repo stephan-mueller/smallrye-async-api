@@ -1,0 +1,47 @@
+# Quarkus extension for SmallRye AsyncAPI
+
+The Quarkus extension for SmallRye AsyncAPI is an extension for the Quarkus
+framework. The extension integrates the SmallRye implementation of OK-Profile
+AsyncAPI with Quarkus. It is planned to provide the extension to the Quarkus
+project in the future.
+
+== Quarkus Extension
+
+=== What is a Quarkus extension?
+
+Think of Quarkus extensions as your project dependencies. Extensions configure,
+boot and integrate a framework or technology into your Quarkus application.
+They also do all of the heavy lifting of providing the right information to
+GraalVM for your application to compile natively.
+
+Quarkus extensions add a new developer focused behavior to the core offering,
+and consist of two distinct parts, buildtime augmentation and runtime
+container. The augmentation part is responsible for all metadata processing,
+such as reading annotations, XML descriptors etc. The output of this
+augmentation phase is recorded bytecode which is responsible for directly
+instantiating the relevant runtime services.
+
+This means that metadata is only processed once at build time, which both
+saves on startup time, and also on memory usage as the classes etc that are
+used for processing are not loaded (or even present) in the runtime JVM.
+
+=== Why an extension framework?
+
+Quarkus’s mission is to transform your entire application including the
+libraries it uses, into an artifact that uses significantly less resources than
+traditional approaches. These can then be used to build native applications
+using GraalVM. To do this you need to analyze and understand the full "closed
+world" of the application. Without the full and complete context, the best that
+can be achieved is partial and limited generic support. By using the Quarkus
+extension approach, we can bring Java applications in line with memory
+footprint constrained environments like Kubernetes or cloud platforms.
+
+The Quarkus extension framework results in significantly improved resource
+utilization even when GraalVM is not used (e.g. in HotSpot)
+
+=== Favor build time work over runtime work
+
+As much as possible favor doing work at build time (deployment part of the
+extension) as opposed to let the framework do work at startup time (runtime).
+The more is done there, the smaller Quarkus applications using that extension
+will be and the faster they will load.

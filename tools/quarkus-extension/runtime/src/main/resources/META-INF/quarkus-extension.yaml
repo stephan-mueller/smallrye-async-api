@@ -1,0 +1,12 @@
+---
+name: "SmallRye AsyncAPI"
+metadata:
+  keywords:
+    - "smallrye-asyncapi"
+    - "sm-asyncapi"
+    - "asyncapi"
+    - "async-api"
+  guide: "https://github.com/smallrye/smallrye-async-api"
+  categories:
+    - "web"
+  status: "stable"
