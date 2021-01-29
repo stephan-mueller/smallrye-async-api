@@ -225,14 +225,15 @@ public class AsyncApiDataObjectScanner {
         while (!objectStack.isEmpty()) {
             DataObjectDeque.PathEntry currentPathEntry = objectStack.pop();
 
-            ClassInfo currentClass = currentPathEntry.getClazz();
-            Schema currentSchema = currentPathEntry.getSchema();
             Type currentType = currentPathEntry.getClazzType();
 
             if (SchemaRegistry.hasSchema(currentType, null)) {
                 // This type has already been scanned and registered, don't do it again!
                 continue;
             }
+
+            ClassInfo currentClass = currentPathEntry.getClazz();
+            Schema currentSchema = currentPathEntry.getSchema();
 
             // First, handle class annotations (re-assign since readKlass may return new schema)
             currentSchema = readKlass(currentClass, currentType, currentSchema);
@@ -246,25 +247,50 @@ public class AsyncApiDataObjectScanner {
                 SchemaFactory.schemaRegistration(context, currentType, currentSchema);
             }
 
-            if (currentSchema.getType() != SchemaType.OBJECT) {
+            if (currentSchema.getType() == SchemaType.OBJECT) {
                 // Only 'object' type schemas should have properties of their own
-                continue;
-            }
+                ScannerLogging.logger.gettingFields(currentType, currentClass);
 
-            ScannerLogging.logger.gettingFields(currentType, currentClass);
+                // reference will be the field or method that declaring the current class type being scanned
+                AnnotationTarget reference = currentPathEntry.getAnnotationTarget();
 
-            // reference will be the field or method that declaring the current class type being scanned
-            AnnotationTarget reference = currentPathEntry.getAnnotationTarget();
-
-            // Get all fields *including* inherited.
-            Map<String, TypeResolver> properties = TypeResolver.getAllFields(index, ignoreResolver, currentType, currentClass,
+                // Get all fields *including* inherited.
+                Map<String, TypeResolver> properties = TypeResolver.getAllFields(index, ignoreResolver, currentType,
+                    currentClass,
                     reference);
 
-            // Handle fields
-            properties.values()
+                // Handle fields
+                properties.values()
                     .stream()
                     .filter(resolver -> !resolver.isIgnored())
-                    .forEach(resolver -> AnnotationTargetProcessor.process(context, objectStack, resolver, currentPathEntry));
+                    .forEach(resolver -> AnnotationTargetProcessor.process(context, objectStack, resolver,
+                        currentPathEntry));
+
+                processInheritance(currentPathEntry);
+            }
+        }
+    }
+
+    private void processInheritance(DataObjectDeque.PathEntry currentPathEntry) {
+        ClassInfo currentClass = currentPathEntry.getClazz();
+        Schema currentSchema = currentPathEntry.getSchema();
+        Type currentType = currentPathEntry.getClazzType();
+
+        if (TypeUtil.isIncludedAllOf(currentClass, currentType)) {
+            Schema enclosingSchema = new SchemaImpl().allOf(currentSchema.getAllOf()).addAllOf(currentSchema);
+            currentSchema.setAllOf(null);
+
+            currentSchema = enclosingSchema;
+            currentPathEntry.setSchema(currentSchema);
+
+            if (rootClassType.equals(currentType)) {
+                this.rootSchema = enclosingSchema;
+            }
+
+            if (SchemaRegistry.hasSchema(currentType, null)) {
+                // Replace the registered schema if one is present
+                SchemaRegistry.currentInstance().register(currentType, enclosingSchema);
+            }
         }
     }
 

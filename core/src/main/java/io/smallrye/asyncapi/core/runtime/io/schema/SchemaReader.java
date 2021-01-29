@@ -18,6 +18,7 @@ package io.smallrye.asyncapi.core.runtime.io.schema;
 import static io.smallrye.asyncapi.core.runtime.io.JsonUtil.readObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -133,9 +134,9 @@ public class SchemaReader {
              * The name is REQUIRED when the schema is defined within
              * {@link org.eclipse.microprofile.openapi.annotations.Components}.
              */
-            //if (name != null) {
-            //  map.put(name, SchemaFactory.readSchema(context, new SchemaImpl(name), nested, Collections.emptyMap()));
-            //}
+            if (name != null) {
+              map.put(name, SchemaFactory.readSchema(context, new SchemaImpl(name), nested, Collections.emptyMap()));
+            }
         }
         return map;
     }

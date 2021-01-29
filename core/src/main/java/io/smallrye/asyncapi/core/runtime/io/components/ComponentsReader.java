@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.smallrye.asyncapi.core.runtime.io.schema.SchemaReader;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 
@@ -57,6 +58,7 @@ public class ComponentsReader {
                 .setMessages(MessageReader.readMessages(context, nested.value(ComponentsConstant.PROP_MESSAGES)).orElse(null));
         components.setSecuritySchemes(SecuritySchemesReader
                 .readSecuritySchemes(context, nested.value(ComponentsConstant.PROP_SECURITY_SCHEMES)).orElse(null));
+        components.setSchemas(SchemaReader.readSchemas(context,nested.value(ComponentsConstant.PROP_SCHEMAS)));
 
         return components;
     }
@@ -73,21 +75,8 @@ public class ComponentsReader {
         components.setSecuritySchemes(
                 SecuritySchemesReader.readSecuritySchemes(node.get(ComponentsConstant.PROP_SECURITY_SCHEMES)).orElse(null));
         components.setParameters(ParameterReader.readParametersMap(node.get(ComponentsConstant.PROP_PARAMETERS)).orElse(null));
+        components.setSchemas(SchemaReader.readSchemas(node.get(ComponentsConstant.PROP_SCHEMAS)).orElse(null));
 
         return components;
-    }
-
-    private static Map<String, SecurityScheme> listToMap(final List<SecurityScheme> list) {
-        if (list == null) {
-            return new HashMap<>();
-        }
-
-        HashMap<String, SecurityScheme> map = new HashMap<>();
-
-        list.stream()
-                .filter(Objects::nonNull)
-                .forEach(o -> map.put(o.getType().toString(), o));
-
-        return map;
     }
 }

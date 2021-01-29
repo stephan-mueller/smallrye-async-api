@@ -21,6 +21,7 @@ import io.smallrye.asyncapi.core.runtime.io.definition.DefinitionConstant;
 import io.smallrye.asyncapi.core.runtime.io.extension.ExtensionWriter;
 import io.smallrye.asyncapi.core.runtime.io.message.MessageWriter;
 import io.smallrye.asyncapi.core.runtime.io.parameter.ParameterWriter;
+import io.smallrye.asyncapi.core.runtime.io.schema.SchemaWriter;
 import io.smallrye.asyncapi.core.runtime.io.securityscheme.SecuritySchemesWriter;
 import io.smallrye.asyncapi.spec.models.Components;
 
@@ -47,6 +48,7 @@ public class ComponentsWriter {
         MessageWriter.writeMessages(node, model.getMessages());
         SecuritySchemesWriter.writeSecuritySchemes(node, model.getSecuritySchemes());
         ParameterWriter.writeParameters(node, model.getParameters());
+        SchemaWriter.writeSchemas(node, model.getSchemas());
         ExtensionWriter.writeExtensions(node, model);
     }
 
