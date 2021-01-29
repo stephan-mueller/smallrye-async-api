@@ -16,6 +16,7 @@
 package io.smallrye.asyncapi.core.runtime.io;
 
 import io.smallrye.asyncapi.core.runtime.scanner.spi.AnnotationScanner;
+import org.jboss.jandex.Type;
 
 public class CurrentScannerInfo {
     private static final ThreadLocal<CurrentScannerInfo> current = new ThreadLocal<>();
@@ -47,6 +48,11 @@ public class CurrentScannerInfo {
 
     public static void remove() {
         current.remove();
+    }
+
+    public static boolean isWrapperType(Type type) {
+        AnnotationScanner scanner = getCurrentAnnotationScanner();
+        return scanner != null && scanner.isWrapperType(type);
     }
 
     private String[] currentConsumes;

@@ -25,12 +25,15 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.smallrye.asyncapi.core.api.constants.JDKConstants;
+import io.smallrye.asyncapi.core.runtime.scanner.AnnotationScannerExtension;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.FieldInfo;
+import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.Type;
 
 import io.smallrye.asyncapi.core.api.constants.AsyncApiConstants;
@@ -252,20 +255,19 @@ public class SchemaFactory {
         schema.setExtensions(ExtensionReader.readExtensions(context, annotation));
 
         schema.setProperties(SchemaFactory.<AnnotationInstance[], Map<String, Schema>> readAttr(annotation,
-                SchemaConstant.PROP_PROPERTIES, properties -> {
-                    if (properties == null || properties.length == 0) {
-                        return null;
-                    }
-                    Map<String, Schema> propertySchemas = new LinkedHashMap<>(properties.length);
-                    for (AnnotationInstance propAnnotation : properties) {
-                        String key = JandexUtil.value(propAnnotation, SchemaConstant.PROP_NAME);
-                        Schema value = readSchema(context, new SchemaImpl(), propAnnotation,
-                                Collections.emptyMap());
-                        propertySchemas.put(key, value);
-                    }
+            SchemaConstant.PROP_PROPERTIES, properties -> {
+                if (properties == null || properties.length == 0) {
+                    return null;
+                }
+                Map<String, Schema> propertySchemas = new LinkedHashMap<>(properties.length);
+                for (AnnotationInstance propAnnotation : properties) {
+                    String key = JandexUtil.value(propAnnotation, SchemaConstant.PROP_NAME);
+                    Schema value = readSchema(context, new SchemaImpl(), propAnnotation, Collections.emptyMap());
+                    propertySchemas.put(key, value);
+                }
 
-                    return propertySchemas;
-                }, defaults));
+                return propertySchemas;
+            }, defaults));
 
         List<String> enumeration = readAttr(annotation, SchemaConstant.PROP_ENUMERATION, defaults);
 
@@ -302,56 +304,49 @@ public class SchemaFactory {
         return schema;
     }
 
-    public static SchemaProperty readSchemaProperty(final AnnotationScannerContext context,
-            SchemaProperty schema,
-            AnnotationInstance annotation,
-            Map<String, Object> defaults) {
+    /**
+     * Converts a Jandex type to a {@link Schema} model.
+     *
+     * @param context scanning context
+     * @param type the implementation type of the item to scan
+     * @param extensions list of AnnotationScannerExtensions
+     * @return Schema model
+     */
+    public static Schema typeToSchema(final AnnotationScannerContext context, Type type,
+        List<AnnotationScannerExtension> extensions) {
+        Schema schema = null;
 
-        //schema.setNot(SchemaFactory.<Type, SchemaProperty> readAttr(annotation, SchemaConstant.PROP_NOT,
-        //    type -> readClassSchema(context, type, true), defaults));
-        schema.setOneOf(SchemaFactory.<Type[], List<Schema>> readAttr(annotation, SchemaConstant.PROP_ONE_OF,
-                type -> readClassSchemas(context, type), defaults));
-        schema.setAnyOf(SchemaFactory.<Type[], List<Schema>> readAttr(annotation, SchemaConstant.PROP_ANY_OF,
-                type -> readClassSchemas(context, type), defaults));
-        schema.setAllOf(SchemaFactory.<Type[], List<Schema>> readAttr(annotation, SchemaConstant.PROP_ALL_OF,
-                type -> readClassSchemas(context, type), defaults));
-        schema.setTitle(readAttr(annotation, SchemaConstant.PROP_TITLE, defaults));
-        schema.setMultipleOf(SchemaFactory.<Double, BigDecimal> readAttr(annotation, SchemaConstant.PROP_MULTIPLE_OF,
-                BigDecimal::valueOf, defaults));
-        schema.setMaximum(SchemaFactory.<String, BigDecimal> readAttr(annotation, SchemaConstant.PROP_MAXIMUM,
-                BigDecimal::new, defaults));
-        schema.setMinimum(SchemaFactory.<String, BigDecimal> readAttr(annotation, SchemaConstant.PROP_MINIMUM,
-                BigDecimal::new, defaults));
-        schema.setExclusiveMaximum(readAttr(annotation, SchemaConstant.PROP_EXCLUSIVE_MAXIMUM, defaults));
-        schema.setExclusiveMinimum(readAttr(annotation, SchemaConstant.PROP_EXCLUSIVE_MINIMUM, defaults));
-        schema.setMaxLength(readAttr(annotation, SchemaConstant.PROP_MAX_LENGTH, defaults));
-        schema.setMinLength(readAttr(annotation, SchemaConstant.PROP_MIN_LENGTH, defaults));
-        schema.setPattern(readAttr(annotation, SchemaConstant.PROP_PATTERN, defaults));
-        schema.setMaxProperties(readAttr(annotation, SchemaConstant.PROP_MAX_PROPERTIES, defaults));
-        schema.setMinProperties(readAttr(annotation, SchemaConstant.PROP_MIN_PROPERTIES, defaults));
-        schema.setRequired(readAttr(annotation, SchemaConstant.PROP_REQUIRED_PROPERTIES, defaults));
-        schema.setDescription(readAttr(annotation, SchemaConstant.PROP_DESCRIPTION, defaults));
-        schema.setFormat(readAttr(annotation, SchemaConstant.PROP_FORMAT, defaults));
-        schema.setRef(readAttr(annotation, AsyncApiConstants.REF, defaults));
-        schema.setReadOnly(readAttr(annotation, SchemaConstant.PROP_READ_ONLY, defaults));
-        schema.setWriteOnly(readAttr(annotation, SchemaConstant.PROP_WRITE_ONLY, defaults));
-        final SchemaType schemaType = SchemaFactory.<String, SchemaType> readAttr(annotation, SchemaConstant.PROP_TYPE,
-                value -> JandexUtil.enumValue(value, SchemaType.class), defaults);
-        schema.setType(schemaType);
-        schema.setExample((String) parseSchemaAttr(annotation, SchemaConstant.PROP_EXAMPLE, defaults, schemaType));
-        schema.setMaxItems(readAttr(annotation, SchemaConstant.PROP_MAX_ITEMS, defaults));
-        schema.setMinItems(readAttr(annotation, SchemaConstant.PROP_MIN_ITEMS, defaults));
-        schema.setUniqueItems(readAttr(annotation, SchemaConstant.PROP_UNIQUE_ITEMS, defaults));
-        schema.setExtensions(ExtensionReader.readExtensions(context, annotation));
+        if (TypeUtil.isOptional(type)) {
+            // Recurse using the optional's type
+            return typeToSchema(context, TypeUtil.getOptionalType(type), extensions);
+        } else if (CurrentScannerInfo.isWrapperType(type)) {
+            // Recurse using the wrapped type
+            return typeToSchema(context, CurrentScannerInfo.getCurrentAnnotationScanner().unwrapType(type), extensions);
+        } else if (type.kind() == Type.Kind.ARRAY) {
+            schema = new SchemaImpl().type(SchemaType.ARRAY);
+            ArrayType array = type.asArrayType();
+            int dimensions = array.dimensions();
+            Type componentType = array.component();
 
-        List<String> enumeration = readAttr(annotation, SchemaConstant.PROP_ENUMERATION, defaults);
-
-        if (enumeration != null && !enumeration.isEmpty()) {
-            schema.setEnumeration(enumeration);
+            if (dimensions > 1) {
+                // Recurse using a new array type with dimensions decremented
+                schema.items(typeToSchema(context, ArrayType.create(componentType, dimensions - 1), extensions));
+            } else {
+                // Recurse using the type of the array elements
+                schema.items(typeToSchema(context, componentType, extensions));
+            }
+        } else if (type.kind() == Type.Kind.CLASS) {
+            schema = introspectClassToSchema(context, type.asClassType(), true);
+        } else if (type.kind() == Type.Kind.PRIMITIVE) {
+            schema = AsyncApiDataObjectScanner.process(type.asPrimitiveType());
+        } else {
+            schema = otherTypeToSchema(context, type, extensions);
         }
 
         return schema;
     }
+
+
 
     /**
      * Reads the attribute named by propertyName from annotation, and parses it to identified type. If no value was specified,
@@ -411,6 +406,29 @@ public class SchemaFactory {
             schema = introspectClassToSchema(context, type.asClassType(), schemaReferenceSupported);
         }
         return schema;
+    }
+
+    private static Schema otherTypeToSchema(final AnnotationScannerContext context, Type type,
+        List<AnnotationScannerExtension> extensions) {
+
+        Type asyncType = resolveAsyncType(context, type, extensions);
+        return schemaRegistration(context, asyncType, AsyncApiDataObjectScanner.process(context, asyncType));
+    }
+
+    static Type resolveAsyncType(final AnnotationScannerContext context, Type type,
+        List<AnnotationScannerExtension> extensions) {
+        if (type.kind() == Type.Kind.PARAMETERIZED_TYPE) {
+            ParameterizedType pType = type.asParameterizedType();
+            if (pType.arguments().size() == 1 && TypeUtil.isA(context, type, JDKConstants.COMPLETION_STAGE_TYPE)) {
+                return pType.arguments().get(0);
+            }
+        }
+        for (AnnotationScannerExtension extension : extensions) {
+            Type asyncType = extension.resolveAsyncType(type);
+            if (asyncType != null)
+                return asyncType;
+        }
+        return type;
     }
 
     /**

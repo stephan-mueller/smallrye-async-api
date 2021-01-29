@@ -616,6 +616,12 @@ public class TypeUtil {
         return Collections.emptyList();
     }
 
+    public static boolean isIncludedAllOf(ClassInfo annotatedClass, Type type) {
+        Type[] allOfTypes = getAnnotationValue(annotatedClass, SchemaConstant.DOTNAME_SCHEMA, SchemaConstant.PROP_ALL_OF);
+        return allOfTypes != null && Arrays.stream(allOfTypes).map(Type::name).anyMatch(type.name()::equals);
+    }
+
+
     /**
      * Test whether testSubject is an instanceof type test.
      * <p>

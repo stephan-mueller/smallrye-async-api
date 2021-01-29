@@ -122,7 +122,7 @@ public class AnnotationTargetProcessor implements BeanValidationScanner.Requirem
         } else {
             // Process the type of the field to derive the typeSchema
             TypeProcessor typeProcessor = new TypeProcessor(context, objectStack, parentPathEntry, typeResolver, entityType,
-                    new SchemaImpl(), annotationTarget);
+                new SchemaImpl(), annotationTarget);
 
             // Type could be replaced (e.g. generics)
             fieldType = typeProcessor.processType();
@@ -150,6 +150,9 @@ public class AnnotationTargetProcessor implements BeanValidationScanner.Requirem
         if (schemaAnnotation != null) {
             // Handle field annotated with @Schema.
             fieldSchema = readSchemaAnnotatedField(propertyKey, schemaAnnotation, fieldType);
+        } else if (registrationSuccessful(typeSchema, registeredTypeSchema)) {
+            // The type schema was registered, start with empty schema for the field using the type from the field type's schema
+            fieldSchema = new SchemaImpl().type(typeSchema.getType());
         } else {
             // Use the type's schema for the field as a starting point (poor man's clone)
             fieldSchema = MergeUtil.mergeObjects(new SchemaImpl(), typeSchema);
@@ -158,7 +161,7 @@ public class AnnotationTargetProcessor implements BeanValidationScanner.Requirem
         BeanValidationScanner.applyConstraints(annotationTarget, fieldSchema, propertyKey, this);
 
         // Only when registration was successful (ref is present and the registered type is a different instance)
-        if (typeSchema != registeredTypeSchema && registeredTypeSchema.getRef() != null) {
+        if (registrationSuccessful(typeSchema, registeredTypeSchema)) {
             // Check if the field specifies something additional or different from the type's schema
             if (fieldOverridesType(fieldSchema, typeSchema)) {
                 TypeUtil.clearMatchingDefaultAttributes(fieldSchema, typeSchema); // Remove duplicates
@@ -174,7 +177,20 @@ public class AnnotationTargetProcessor implements BeanValidationScanner.Requirem
             fieldSchema = MergeUtil.mergeObjects(typeSchema, fieldSchema);
         }
 
+        parentPathEntry.getSchema().addProperty(propertyKey, fieldSchema);
         return fieldSchema;
+    }
+
+    /**
+     * A successful registration results in the registered type schema being a distinct
+     * Schema instance containing only a <code>ref</code> to the original type schema.
+     *
+     * @param typeSchema schema for a type
+     * @param registeredTypeSchema a (potential) reference schema to typeSchema
+     * @return true if the schemas are not the same (i.e. registration occurred), otherwise false
+     */
+    private boolean registrationSuccessful(Schema typeSchema, Schema registeredTypeSchema) {
+        return (typeSchema != registeredTypeSchema);
     }
 
     private Schema readSchemaAnnotatedField(String propertyKey, AnnotationInstance annotation, Type postProcessedField) {

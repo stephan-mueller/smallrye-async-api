@@ -20,8 +20,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
+import io.smallrye.asyncapi.core.runtime.io.schema.SchemaConstant;
+import io.smallrye.asyncapi.core.runtime.io.schema.SchemaFactory;
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.IndexView;
 
 import io.smallrye.asyncapi.core.api.AsyncApiConfig;
@@ -36,6 +40,7 @@ import io.smallrye.asyncapi.core.runtime.scanner.spi.AnnotationScanner;
 import io.smallrye.asyncapi.core.runtime.scanner.spi.AnnotationScannerContext;
 import io.smallrye.asyncapi.core.runtime.scanner.spi.AnnotationScannerFactory;
 import io.smallrye.asyncapi.spec.models.AsyncAPI;
+import org.jboss.jandex.Type;
 
 /**
  * Scans a deployment (using the archive and jandex annotation index) for AsyncAPI annotations. Also delegate to all other
@@ -142,6 +147,8 @@ public class AsyncApiAnnotationScanner {
         ScannerLogging.logger.scanning("AsyncAPI");
         processAsyncAPIDefinitions(annotationScannerContext, asyncAPI);
 
+        processClassSchemas(annotationScannerContext);
+
         return asyncAPI;
     }
 
@@ -181,5 +188,20 @@ public class AsyncApiAnnotationScanner {
                 throw ScannerMessages.msg.failedCreateInstance(config.customSchemaRegistryClass(), ex);
             }
         }
+    }
+
+    private void processClassSchemas(final AnnotationScannerContext context) {
+        CurrentScannerInfo.register(null);
+
+        context.getIndex()
+            .getAnnotations(SchemaConstant.DOTNAME_SCHEMA)
+            .stream()
+            .filter(this::annotatedClasses)
+            .map(annotation -> Type.create(annotation.target().asClass().name(), Type.Kind.CLASS))
+            .forEach(type -> SchemaFactory.typeToSchema(context, type, context.getExtensions()));
+    }
+
+    private boolean annotatedClasses(AnnotationInstance annotation) {
+        return Objects.equals(annotation.target().kind(), AnnotationTarget.Kind.CLASS);
     }
 }

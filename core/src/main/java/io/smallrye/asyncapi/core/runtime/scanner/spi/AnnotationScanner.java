@@ -36,6 +36,7 @@ import io.smallrye.asyncapi.spec.models.channel.Channels;
 import io.smallrye.asyncapi.spec.models.message.Message;
 import io.smallrye.asyncapi.spec.models.parameter.Parameter;
 import io.smallrye.asyncapi.spec.models.security.SecurityScheme;
+import org.jboss.jandex.Type;
 
 public interface AnnotationScanner {
 
@@ -45,6 +46,18 @@ public interface AnnotationScanner {
     AsyncAPI scan(final AnnotationScannerContext annotationScannerContext, AsyncAPI aai);
 
     void setContextRoot(String path);
+
+    // For wrapped type (other than Optional) - default no others
+    default boolean isWrapperType(Type type) {
+        return false;
+    }
+
+    default Type unwrapType(Type type) {
+        if (isWrapperType(type)) {
+            return type.asParameterizedType().arguments().get(0);
+        }
+        return null;
+    }
 
     /**
      * Process a certain class for AsyncAPI annotations.
