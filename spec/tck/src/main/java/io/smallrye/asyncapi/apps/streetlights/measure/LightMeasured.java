@@ -22,14 +22,13 @@ import io.smallrye.asyncapi.spec.annotations.schema.Schema;
 import io.smallrye.asyncapi.spec.annotations.schema.SchemaProperty;
 import io.smallrye.asyncapi.spec.annotations.schema.SchemaType;
 
-@Schema(name = "lightMeasuredPayload", type = SchemaType.OBJECT, properties = {
-        @SchemaProperty(name = "lumens", type = SchemaType.INTEGER, description = "Light intensity measured in lumens.", minimum = "0"),
-        @SchemaProperty(ref = "#/components/schemas/sentAt")
-})
+@Schema(name = "lightMeasuredPayload", type = SchemaType.OBJECT)
 public class LightMeasured {
 
+    @Schema(name = "lumens", type = SchemaType.INTEGER, description = "Light intensity measured in lumens.", minimum = "0", required = true)
     private int lumens;
 
+    @Schema(ref = "#/components/schemas/sentAt")
     private LocalDateTime sentAt;
 
     public LightMeasured() {

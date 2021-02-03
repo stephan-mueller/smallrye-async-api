@@ -23,8 +23,10 @@ import io.smallrye.asyncapi.spec.annotations.schema.Schema;
 @Schema(name = "turnOnOffPayload")
 public class TurnOnOff {
 
+    @Schema(required = true)
     private Command command;
 
+    @Schema(required = true)
     private LocalDateTime sentAt;
 
     public TurnOnOff() {

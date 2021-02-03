@@ -30,8 +30,7 @@ import io.smallrye.asyncapi.spec.annotations.schema.SchemaType;
 
 public class HTTPService {
 
-    @ChannelItem(channel = "http-test1", subscribe = @Operation(bindings = @OperationBindings(httpBinding = @HTTPOperationBinding(type = "request", method = Method.GET, query = @Schema(type = SchemaType.OBJECT, required = {
-            "companyId" }, properties = {
+    @ChannelItem(channel = "http-test1", subscribe = @Operation(bindings = @OperationBindings(httpBinding = @HTTPOperationBinding(type = "request", method = Method.GET, query = @Schema(type = SchemaType.OBJECT, properties = {
                     @SchemaProperty(name = "companyId", minimum = "1", description = "The Id of the company")
             }), bindingVersion = "0.1.0")))
 

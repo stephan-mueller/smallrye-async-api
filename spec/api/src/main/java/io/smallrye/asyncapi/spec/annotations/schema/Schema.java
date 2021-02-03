@@ -68,7 +68,7 @@ public @interface Schema {
      *
      * @return array of required types for this schema
      */
-    String[] required() default {};
+    boolean required() default false;
 
     /**
      * A description of the schema.
