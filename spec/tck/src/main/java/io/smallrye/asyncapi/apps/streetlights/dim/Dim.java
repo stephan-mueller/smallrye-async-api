@@ -22,15 +22,13 @@ import io.smallrye.asyncapi.spec.annotations.schema.Schema;
 import io.smallrye.asyncapi.spec.annotations.schema.SchemaProperty;
 import io.smallrye.asyncapi.spec.annotations.schema.SchemaType;
 
-@Schema(name = "dimLightPayload", type = SchemaType.OBJECT, properties = {
-        @SchemaProperty(name = "percentage", type = SchemaType.INTEGER, description = "Percentage to which the light should be dimmed to.", minimum = "0", maximum = "100"),
-        @SchemaProperty(ref = "#/components/schemas/sentAt")
-})
+@Schema(name = "dimLightPayload", type = SchemaType.OBJECT)
 public class Dim {
 
+    @Schema(name = "percentage", type = SchemaType.INTEGER, description = "Percentage to which the light should be dimmed to.", minimum = "0", maximum = "100", required = true)
     private int percentage;
 
-    @Schema(type = SchemaType.STRING, format = "date-time", description = "Date and time when the message was sent.")
+    @Schema(type = SchemaType.STRING, format = "date-time", description = "Date and time when the message was sent.", required = true)
     private LocalDateTime sentAt;
 
     public Dim() {

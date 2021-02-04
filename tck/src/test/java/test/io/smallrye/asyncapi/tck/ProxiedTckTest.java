@@ -1,11 +1,11 @@
-/**
- * Copyright 2019 Red Hat, Inc, and individual contributors.
+/*
+ * Copyright 2019 Red Hat
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,18 +20,25 @@ import java.lang.reflect.Method;
 
 import org.jboss.arquillian.testng.Arquillian;
 
-/**
- * @author eric.wittmann@gmail.com
- */
 public class ProxiedTckTest {
 
     private Arquillian delegate;
+
     private Object test;
+
     private Method testMethod;
 
-    /**
-     * Constructor.
-     */
+    private Object[] arguments;
+
+    public static ProxiedTckTest create(Arquillian delegate, Object test, Method testMethod, Object[] arguments) {
+        ProxiedTckTest tckTest = new ProxiedTckTest();
+        tckTest.delegate = delegate;
+        tckTest.test = test;
+        tckTest.testMethod = testMethod;
+        tckTest.arguments = arguments;
+        return tckTest;
+    }
+
     public ProxiedTckTest() {
     }
 
@@ -77,4 +84,11 @@ public class ProxiedTckTest {
         this.test = test;
     }
 
+    public Object[] getArguments() {
+        return arguments;
+    }
+
+    public void setArguments(Object[] arguments) {
+        this.arguments = arguments;
+    }
 }
