@@ -16,6 +16,6 @@
 
 package io.smallrye.asyncapi.ui;
 
-public enum Option {
+enum Option {
   url
 }
